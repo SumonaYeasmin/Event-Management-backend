@@ -13,6 +13,28 @@
 
 
 
+// import { ValidationPipe } from '@nestjs/common';
+// import { NestFactory } from '@nestjs/core';
+// import { AppModule } from './app.module.js';
+
+
+// async function bootstrap() {
+//   const app = await NestFactory.create(AppModule);
+//   app.enableCors();
+//   app.setGlobalPrefix('api/v1');
+//   app.useGlobalPipes(
+//     new ValidationPipe({
+//       whitelist: true,
+//       forbidNonWhitelisted: true,
+//       transform: true,
+//     }),
+//   );
+//   await app.listen(process.env.PORT ?? 5000);
+// }
+// bootstrap();
+
+import 'dotenv/config';
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
@@ -20,8 +42,11 @@ import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   app.enableCors();
+
   app.setGlobalPrefix('api/v1');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -29,7 +54,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  await app.listen(process.env.PORT ?? 5000);
-}
-bootstrap();
 
+  await app.listen(5000);
+}
+
+bootstrap();
