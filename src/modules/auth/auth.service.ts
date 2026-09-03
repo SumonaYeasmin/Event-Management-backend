@@ -1,12 +1,17 @@
 
 
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { RegisterDto } from './dto/register.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
-
+import { RegisterDto } from './dto/register.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -68,5 +73,42 @@ export class AuthService {
       },
     };
   }
+
+  // Change Password
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    // ১. চেক করা বর্তমান পাসওয়ার্ড ডাটাবেজের পাসওয়ার্ডের সাথে মিলে কিনা
+    const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Current password does not match');
+    }
+
+    // ২. নতুন পাসওয়ার্ড ও পুরোনো পাসওয়ার্ড একই কিনা চেক করা
+    if (dto.oldPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'New password cannot be the same as current password',
+      );
+    }
+
+    // ৩. নতুন পাসওয়ার্ড হ্যাশ করে ডাটাবেজে আপডেট করা
+    const hashedNewPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    return {
+      message: 'Password changed successfully',
+    };
+  }
 }
+
 
