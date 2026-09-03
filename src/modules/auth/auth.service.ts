@@ -4,14 +4,18 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { VerifyOtpDto } from './dto/verify-otp.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -109,6 +113,117 @@ export class AuthService {
       message: 'Password changed successfully',
     };
   }
+
+  // Forgot Password (Generate & Save OTP)
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('No user registered with this email address');
+    }
+
+    // ৬ ডিজিটের র‍্যান্ডম OTP জেনারেট (১০০০০০ থেকে ৯৯৯৯৯৯)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // ১০ মিনিটের এক্সপায়ার সময় নির্ধারণ
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // ডাটাবেজে ওটিপি ও মেয়াদ সেভ করা
+    await this.prisma.user.update({
+      where: { email: dto.email },
+      data: {
+        resetOtp: otp,
+        resetOtpExpiresAt: expiresAt,
+      },
+    });
+
+    // টার্মিনালে ডেভেলপার ও টেস্টিং সুবিধার জন্য ওটিপি সুন্দরভাবে লগ করা
+    console.log('\n==================================================');
+    console.log(`🔐 PASSWORD RESET OTP for ${dto.email}`);
+    console.log(`👉 OTP Code: ${otp}`);
+    console.log(`⏳ Valid until: ${expiresAt.toLocaleTimeString()}`);
+    console.log('==================================================\n');
+
+    return {
+      message: 'Password reset OTP has been generated and sent',
+      email: dto.email,
+      expiresIn: '10 minutes',
+      otp, // টেস্টিং সুবিধার জন্য রেসপন্সেও দেওয়া হলো
+    };
+  }
+
+  // Verify OTP
+  async verifyOtp(dto: VerifyOtpDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('No user registered with this email address');
+    }
+
+    // ওটিপি মিলছে কিনা যাচাই
+    if (!user.resetOtp || user.resetOtp !== dto.otp) {
+      throw new BadRequestException('Invalid OTP code');
+    }
+
+    // ওটিপির মেয়াদ আছে কিনা যাচাই
+    if (!user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
+      throw new BadRequestException(
+        'OTP code has expired. Please request a new one.',
+      );
+    }
+
+    return {
+      message: 'OTP verified successfully',
+      valid: true,
+    };
+  }
+
+  // Reset Password
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('No user registered with this email address');
+    }
+
+    // ওটিপি মিলছে কিনা যাচাই
+    if (!user.resetOtp || user.resetOtp !== dto.otp) {
+      throw new BadRequestException('Invalid OTP code');
+    }
+
+    // ওটিপির মেয়াদ আছে কিনা যাচাই
+    if (!user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
+      throw new BadRequestException(
+        'OTP code has expired. Please request a new one.',
+      );
+    }
+
+    // নতুন পাসওয়ার্ড হ্যাশ করা
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    // পাসওয়ার্ড আপডেট এবং ওটিপি ফিল্ডগুলো মুছে ফেলা (যাতে একই ওটিপি আর ব্যবহার না করা যায়)
+    await this.prisma.user.update({
+      where: { email: dto.email },
+      data: {
+        password: hashedPassword,
+        resetOtp: null,
+        resetOtpExpiresAt: null,
+      },
+    });
+
+    return {
+      message:
+        'Password reset successfully. You can now login with your new password.',
+    };
+  }
 }
+
+
 
 
