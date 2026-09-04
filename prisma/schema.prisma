@@ -8,15 +8,38 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role               Role      @default(USER)
-  resetOtp           String?
-  resetOtpExpiresAt  DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  name              String
+  email             String    @unique
+  password          String
+  role              Role      @default(USER)
+  resetOtp          String?
+  resetOtpExpiresAt DateTime?
+  // রিলেশন: একজন অর্গানাইজার একাধিক ইভেন্ট তৈরি করতে পারে
+  events            Event[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+model Event {
+  id             String      @id @default(uuid())
+  title          String
+  description    String      @db.Text
+  bannerImage    String?     // কার্ডের ছবির লিংক
+  date           DateTime    // ইভেন্ট শুরুর তারিখ ও সময়
+  endDate        DateTime?   // ইভেন্ট শেষের তারিখ ও সময়
+  location       String      // ভেন্যু বা মিটিং লিংক
+  category       String      // Technology, Music, Business, etc.
+  eventType      EventType   @default(IN_PERSON)
+  ticketPrice    Float       @default(0.0)
+  totalSeats     Int         // মোট আসন
+  availableSeats Int         // অবশিষ্ট আসন (যেমন: 498 seats left)
+  isFeatured     Boolean     @default(false) // Featured events সেকশনের জন্য
+  status         EventStatus @default(PUBLISHED)
+  // রিলেশন: কোন অর্গানাইজার ইভেন্টটি তৈরি করেছে
+  organizerId    String
+  organizer      User        @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 enum Role {
@@ -24,3 +47,16 @@ enum Role {
   ADMIN
   ORGANIZER
 }
+
+enum EventType {
+  IN_PERSON
+  ONLINE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+

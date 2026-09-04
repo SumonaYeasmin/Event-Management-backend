@@ -47,7 +47,7 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current logged-in user profile (Requires Bearer Token)' })
   @ApiResponse({ status: 200, description: 'Profile fetched successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized / Missing token' })
@@ -60,7 +60,7 @@ export class AuthController {
 
   @Patch('change-password')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Change password for logged-in user' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @ApiResponse({ status: 400, description: 'Current password does not match' })

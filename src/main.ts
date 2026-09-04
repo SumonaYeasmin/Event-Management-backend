@@ -26,17 +26,7 @@ async function bootstrap() {
       'Interactive REST API documentation for the Event Management Backend application.',
     )
     .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
-      },
-      'JWT-auth', // This key must match @ApiBearerAuth('JWT-auth') in controllers
-    )
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
