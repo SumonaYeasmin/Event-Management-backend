@@ -26,6 +26,12 @@ export class AuthService {
 
   // Registration
   async register(dto: RegisterDto) {
+    if (dto.confirmPassword && dto.password !== dto.confirmPassword) {
+      throw new BadRequestException(
+        'Password and Confirm Password do not match',
+      );
+    }
+
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });

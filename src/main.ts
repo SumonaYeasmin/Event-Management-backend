@@ -1,42 +1,8 @@
-// import { NestFactory } from '@nestjs/core';
-// import { AppModule, ObserveInstrument } from './app.module.js';
-// import { ValidationPipe } from '@nestjs/common';
-
-// async function bootstrap() {
-//   const app = await NestFactory.create(AppModule, {
-//     instrument: ObserveInstrument,
-//   });
-//   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-//   await app.listen(process.env.PORT ?? 3000);
-// }
-// await bootstrap();
-
-
-
-// import { ValidationPipe } from '@nestjs/common';
-// import { NestFactory } from '@nestjs/core';
-// import { AppModule } from './app.module.js';
-
-
-// async function bootstrap() {
-//   const app = await NestFactory.create(AppModule);
-//   app.enableCors();
-//   app.setGlobalPrefix('api/v1');
-//   app.useGlobalPipes(
-//     new ValidationPipe({
-//       whitelist: true,
-//       forbidNonWhitelisted: true,
-//       transform: true,
-//     }),
-//   );
-//   await app.listen(process.env.PORT ?? 5000);
-// }
-// bootstrap();
-
 import 'dotenv/config';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
@@ -53,7 +19,35 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 5000);
+  // 📖 Swagger API Documentation Setup
+  const config = new DocumentBuilder()
+    .setTitle('Event Management System API')
+    .setDescription(
+      'Interactive REST API documentation for the Event Management Backend application.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth', // This key must match @ApiBearerAuth('JWT-auth') in controllers
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    customSiteTitle: 'Event Management API Docs',
+  });
+
+  const port = process.env.PORT ?? 5000;
+  await app.listen(port);
+  console.log(`🚀 Server running on: http://localhost:${port}/api/v1`);
+  console.log(`📖 Swagger API Docs: http://localhost:${port}/api/docs`);
 }
 
 bootstrap();
