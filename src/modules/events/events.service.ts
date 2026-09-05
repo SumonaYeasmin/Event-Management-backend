@@ -250,4 +250,44 @@ export class EventsService {
       })),
     };
   }
+
+  // ৯. ইভেন্টের রেজিস্ট্রেশন বাতিল করা (সিট আবার খালি হবে)
+  async cancelRegistration(eventId: string, userId: string) {
+    // ১. চেক: ইউজার এই ইভেন্টে আসলেই রেজিস্টার করেছিল কিনা
+    const registration = await this.prisma.registration.findUnique({
+      where: {
+        userId_eventId: {
+          userId,
+          eventId,
+        },
+      },
+    });
+
+    if (!registration) {
+      throw new NotFoundException('You are not registered for this event');
+    }
+
+    // ২. ট্রানজ্যাকশন: রেজিস্ট্রেশন ডিলিট করা + availableSeats ১টি বাড়িয়ে দেওয়া
+    return this.prisma.$transaction(async (tx) => {
+      await tx.registration.delete({
+        where: {
+          id: registration.id,
+        },
+      });
+
+      await tx.event.update({
+        where: { id: eventId },
+        data: {
+          availableSeats: {
+            increment: 1,
+          },
+        },
+      });
+
+      return {
+        message:
+          'Event registration cancelled successfully. Seat has been released.',
+      };
+    });
+  }
 }

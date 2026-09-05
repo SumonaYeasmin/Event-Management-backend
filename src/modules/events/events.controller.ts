@@ -123,4 +123,17 @@ export class EventsController {
     const user = (req as any).user;
     return this.eventsService.getEventAttendees(id, user.id);
   }
+
+  // ৯. রেজিস্ট্রেশন বাতিল করা (Protected - Logged in User)
+  @Delete(':id/register')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel my registration for an event (Requires Token)' })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({ status: 200, description: 'Registration cancelled successfully' })
+  @ApiResponse({ status: 404, description: 'Not registered for this event' })
+  cancelRegistration(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.cancelRegistration(id, user.id);
+  }
 }
