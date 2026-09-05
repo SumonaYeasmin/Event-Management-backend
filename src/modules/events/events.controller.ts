@@ -109,4 +109,18 @@ export class EventsController {
     const user = (req as any).user;
     return this.eventsService.registerEvent(id, user.id);
   }
+
+  // ৮. ইভেন্টের সমস্ত অ্যাটেন্ডি লিস্ট দেখা (Protected - Only Organizer)
+  @Get(':id/attendees')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get list of attendees for an event (Only Event Organizer)' })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({ status: 200, description: 'List of attendees' })
+  @ApiResponse({ status: 403, description: 'Forbidden: Not your event' })
+  @ApiResponse({ status: 404, description: 'Event not found' })
+  getAttendees(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.getEventAttendees(id, user.id);
+  }
 }
