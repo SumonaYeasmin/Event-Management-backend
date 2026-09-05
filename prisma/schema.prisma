@@ -17,6 +17,8 @@ model User {
   resetOtpExpiresAt DateTime?
   // রিলেশন: একজন অর্গানাইজার একাধিক ইভেন্ট তৈরি করতে পারে
   events            Event[]
+  // রিলেশন: একজন ইউজার একাধিক ইভেন্টে রেজিস্টার করতে পারে
+  registrations     Registration[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -38,6 +40,8 @@ model Event {
   // রিলেশন: কোন অর্গানাইজার ইভেন্টটি তৈরি করেছে
   organizerId    String
   organizer      User        @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  // রিলেশন: ইভেন্টের সমস্ত রেজিস্ট্রেশন
+  registrations  Registration[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 }
@@ -59,4 +63,29 @@ enum EventStatus {
   CANCELLED
   COMPLETED
 }
+
+model Registration {
+  id        String             @id @default(uuid())
+  status    RegistrationStatus @default(CONFIRMED)
+  
+  // কোন ইউজার বুক করেছে
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // কোন ইভেন্ট বুক করা হয়েছে
+  eventId   String
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  // 💡 গুরুত্বপূর্ণ: একই ইউজার যেন একই ইভেন্টে দুইবার রেজিস্টার করতে না পারে
+  @@unique([userId, eventId])
+}
+
+enum RegistrationStatus {
+  CONFIRMED
+  CANCELLED
+}
+
 

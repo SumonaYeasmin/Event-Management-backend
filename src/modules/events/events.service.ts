@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -35,7 +37,7 @@ export class EventsService {
   }
 
 
-   // ৩. সমস্ত ইভেন্ট দেখা (Search, Filter, Pagination সহ)
+   // ২. সমস্ত ইভেন্ট দেখা (Search, Filter, Pagination সহ)
   async findAll(query: QueryEventDto) {
     const { search, category, eventType, page = 1, limit = 5 } = query;
     const skip = (page - 1) * limit;
@@ -136,7 +138,62 @@ export class EventsService {
       where: { id },
     });
   }
+
+  // ৭. ইভেন্টে রেজিস্ট্রেশন / বুকিং করা
+  async registerEvent(eventId: string, userId: string) {
+    // ১. চেক: ইভেন্টটি ডাটাবেজে আছে কি না
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    // ২. চেক: ইউজার ইতিমধ্যে রেজিস্টার করেছে কি না
+    const existingRegistration = await this.prisma.registration.findUnique({
+      where: {
+        userId_eventId: {
+          userId,
+          eventId,
+        },
+      },
+    });
+    if (existingRegistration) {
+      throw new ConflictException('You have already registered for this event');
+    }
+
+    // ৩. চেক: সিট খালি আছে কি না
+    if (event.availableSeats <= 0) {
+      throw new BadRequestException('Sorry, no seats available for this event');
+    }
+
+    // ৪. ট্রানজ্যাকশন: রেজিস্ট্রেশন তৈরি করা + availableSeats ১টি কমানো
+    return this.prisma.$transaction(async (tx) => {
+      const registration = await tx.registration.create({
+        data: {
+          eventId,
+          userId,
+        },
+        include: {
+          event: {
+            select: { id: true, title: true, date: true, location: true },
+          },
+        },
+      });
+
+      await tx.event.update({
+        where: { id: eventId },
+        data: {
+          availableSeats: {
+            decrement: 1,
+          },
+        },
+      });
+
+      return {
+        message: 'Registration successful!',
+        data: registration,
+      };
+    });
+  }
 }
-
-    
-

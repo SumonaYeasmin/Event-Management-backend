@@ -94,4 +94,19 @@ export class EventsController {
     const user = (req as any).user;
     return this.eventsService.remove(id, user.id);
   }
+
+  // ৭. ইভেন্টে রেজিস্ট্রেশন / বুকিং করা (Protected)
+  @Post(':id/register')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register / Book a seat for an event (Requires Token)' })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({ status: 201, description: 'Registration successful' })
+  @ApiResponse({ status: 400, description: 'Bad Request: No seats available' })
+  @ApiResponse({ status: 404, description: 'Event not found' })
+  @ApiResponse({ status: 409, description: 'Conflict: Already registered' })
+  register(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.registerEvent(id, user.id);
+  }
 }
