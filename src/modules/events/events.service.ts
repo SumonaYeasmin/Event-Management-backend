@@ -392,6 +392,33 @@ export class EventsService {
     };
   }
 
+  // ১১. ইউজারের নিজের রেজিস্টার / বুকিং করা সমস্ত ইভেন্টের তালিকা আনা
+  async getMyRegistrations(userId: string) {
+    const registrations = await this.prisma.registration.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        event: {
+          include: {
+            organizer: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      total: registrations.length,
+      data: registrations.map((reg) => ({
+        registrationId: reg.id,
+        status: reg.status,
+        registeredAt: reg.createdAt,
+        event: reg.event,
+      })),
+    };
+  }
+
   // ==========================================
   // 🛡️ ১৭. অ্যাডমিন মডারেশন মেথডস (ADMIN ONLY)
   // ==========================================

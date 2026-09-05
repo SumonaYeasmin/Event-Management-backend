@@ -79,6 +79,18 @@ export class EventsController {
     return this.eventsService.getMyFavorites(user.id);
   }
 
+  // ১১. ইউজারের নিজের রেজিস্টার / বুকিং করা সমস্ত ইভেন্ট দেখা (Protected - Any Logged in User)
+  // (নোট: :id রাউটের আগে my-registrations থাকতে হবে যেন কনফ্লিক্ট না করে)
+  @Get('my-registrations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all events registered / booked by logged-in user' })
+  @ApiResponse({ status: 200, description: 'List of events registered by user' })
+  getMyRegistrations(@Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.getMyRegistrations(user.id);
+  }
+
   // ৪. নির্দিষ্ট একটি ইভেন্ট দেখা (Public)
   @Get(':id')
   @ApiOperation({ summary: 'Get event details by ID' })
