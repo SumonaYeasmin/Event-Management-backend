@@ -1,7 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { QueryEventDto } from './dto/query-event.dto.js';
+import { UpdateEventDto } from './dto/update-event.dto.js';
 
 
 @Injectable()
@@ -74,5 +79,64 @@ export class EventsService {
   }
 
 
-    
+  // ৩. অর্গানাইজারের নিজের তৈরি করা ইভেন্টগুলো
+  async findMyEvents(organizerId: string) {
+    return this.prisma.event.findMany({
+      where: { organizerId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organizer: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+  }
+  // ৪. নির্দিষ্ট একটি ইভেন্টের বিস্তারিত দেখা
+  async findOne(id: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+      include: {
+        organizer: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
+    }
+    return event;
+  }
+  // ৫. ইভেন্ট আপডেট করা (শুধু যে তৈরি করেছে সেই আপডেট করতে পারবে)
+  async update(id: string, organizerId: string, dto: UpdateEventDto) {
+    const event = await this.findOne(id);
+    // সিকিউরিটি চেক: অর্গানাইজার ম্যাচ করে কিনা
+    if (event.organizerId !== organizerId) {
+      throw new ForbiddenException('You are not authorized to update this event');
+    }
+    const { date, endDate, ...rest } = dto;
+    return this.prisma.event.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(date && { date: new Date(date) }),
+        ...(endDate !== undefined && {
+          endDate: endDate ? new Date(endDate) : null,
+        }),
+      },
+    });
+  }
+  // ৬. ইভেন্ট ডিলিট করা (শুধু যে তৈরি করেছে সেই মুছতে পারবে)
+  async remove(id: string, organizerId: string) {
+    const event = await this.findOne(id);
+    // সিকিউরিটি চেক: অর্গানাইজার ম্যাচ করে কিনা
+    if (event.organizerId !== organizerId) {
+      throw new ForbiddenException('You are not authorized to delete this event');
+    }
+    return this.prisma.event.delete({
+      where: { id },
+    });
+  }
 }
+
+    
+
