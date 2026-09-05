@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventStatus } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { QueryEventDto } from './dto/query-event.dto.js';
@@ -14,7 +15,7 @@ import { UpdateEventDto } from './dto/update-event.dto.js';
 export class EventsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ১. নতুন ইভেন্ট তৈরি (availableSeats স্বয়ংক্রিয়ভাবে totalSeats এর সমান সেট হবে)
+  // ১. নতুন ইভেন্ট তৈরি (Default Status: PENDING - অ্যাডমিন অনুমোদনের অপেক্ষায় থাকবে)
   async create(organizerId: string, dto: CreateEventDto) {
     return this.prisma.event.create({
       data: {
@@ -30,16 +31,18 @@ export class EventsService {
         totalSeats: dto.totalSeats,
         availableSeats: dto.totalSeats, // শুরুতে সমস্ত সিট অবশিষ্ট থাকবে
         isFeatured: dto.isFeatured ?? false,
+        status: EventStatus.PENDING, // 👈 অ্যাডমিনের অ্যাপ্রুভালের জন্য PENDING থাকবে
         organizerId,
       },
     });
   }
 
-  // ২. সমস্ত ইভেন্ট দেখা (Search, Filter, Pagination সহ)
+  // ২. সমস্ত পাবলিক ইভেন্ট দেখা (শুধু PUBLISHED ইভেন্টগুলো সাধারণ ইউজাররা দেখবে)
   async findAll(query: QueryEventDto) {
     const { search, category, eventType, page = 1, limit = 5 } = query;
     const skip = (page - 1) * limit;
-    const where: any = { status: 'PUBLISHED' };
+    const where: any = { status: EventStatus.PUBLISHED };
+
     if (category) {
       where.category = { equals: category, mode: 'insensitive' };
     }
@@ -53,6 +56,7 @@ export class EventsService {
         { description: { contains: search, mode: 'insensitive' } },
       ];
     }
+
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({
         where,
@@ -67,6 +71,7 @@ export class EventsService {
       }),
       this.prisma.event.count({ where }),
     ]);
+
     return {
       data: events,
       meta: {
@@ -78,7 +83,7 @@ export class EventsService {
     };
   }
 
-  // ৩. অর্গানাইজারের নিজের তৈরি করা ইভেন্টগুলো
+  // ৩. অর্গানাইজারের নিজের তৈরি করা সমস্ত ইভেন্ট (PENDING, PUBLISHED সব স্ট্যাটাস দেখবে)
   async findMyEvents(organizerId: string) {
     return this.prisma.event.findMany({
       where: { organizerId },
@@ -107,7 +112,7 @@ export class EventsService {
     return event;
   }
 
-  // ৫. ইভেন্ট আপডেট করা (শুধু যে তৈরি করেছে সেই আপডেট করতে পারবে)
+  // ৫. ইভেন্ট আপডেট করা (শুধু যে তৈরি করেছে বা অ্যাডমিন আপডেট করতে পারবে)
   async update(id: string, organizerId: string, dto: UpdateEventDto) {
     const event = await this.findOne(id);
     // সিকিউরিটি চেক: অর্গানাইজার ম্যাচ করে কিনা
@@ -151,6 +156,10 @@ export class EventsService {
     });
     if (!event) {
       throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    if (event.status !== EventStatus.PUBLISHED) {
+      throw new BadRequestException('Cannot register for an unpublished event');
     }
 
     // ২. চেক: ইউজার ইতিমধ্যে রেজিস্টার করেছে কি না
@@ -253,7 +262,6 @@ export class EventsService {
 
   // ৯. ইভেন্টের রেজিস্ট্রেশন বাতিল করা (সিট আবার খালি হবে)
   async cancelRegistration(eventId: string, userId: string) {
-    // ১. চেক: ইউজার এই ইভেন্টে আসলেই রেজিস্টার করেছিল কিনা
     const registration = await this.prisma.registration.findUnique({
       where: {
         userId_eventId: {
@@ -267,7 +275,6 @@ export class EventsService {
       throw new NotFoundException('You are not registered for this event');
     }
 
-    // ২. ট্রানজ্যাকশন: রেজিস্ট্রেশন ডিলিট করা + availableSeats ১টি বাড়িয়ে দেওয়া
     return this.prisma.$transaction(async (tx) => {
       await tx.registration.delete({
         where: {
@@ -293,7 +300,6 @@ export class EventsService {
 
   // ১০.১ ইভেন্ট ফেভারিট / বুকমার্ক করা
   async addFavorite(eventId: string, userId: string) {
-    // ১. চেক: ইভেন্টটি ডাটাবেজে আছে কি না
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
     });
@@ -301,7 +307,6 @@ export class EventsService {
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
 
-    // ২. চেক: ইতিমধ্যে ফেভারিট করা আছে কি না
     const existing = await this.prisma.favorite.findUnique({
       where: {
         userId_eventId: {
@@ -314,7 +319,6 @@ export class EventsService {
       throw new ConflictException('Event is already in your favorites');
     }
 
-    // ৩. সেভ করা
     const favorite = await this.prisma.favorite.create({
       data: {
         eventId,
@@ -387,5 +391,106 @@ export class EventsService {
       data: favorites.map((fav) => fav.event),
     };
   }
-}
 
+  // ==========================================
+  // 🛡️ ১৭. অ্যাডমিন মডারেশন মেথডস (ADMIN ONLY)
+  // ==========================================
+
+  // ১৭.১ অ্যাডমিনের জন্য সব ইভেন্ট ফেচ করা (ফিল্টারিং ও পেজিনেশন সহ)
+  async findAllForAdmin(query: {
+    status?: EventStatus;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { status, search, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          organizer: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+          _count: {
+            select: {
+              registrations: true,
+              favorites: true,
+            },
+          },
+        },
+      }),
+      this.prisma.event.count({ where }),
+    ]);
+
+    return {
+      data: events,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // ১৭.২ অ্যাডমিন কর্তৃক ইভেন্টের স্ট্যাটাস আপডেট করা (Approve, Reject, Cancel)
+  async updateEventStatusByAdmin(id: string, status: EventStatus) {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
+    }
+
+    const updatedEvent = await this.prisma.event.update({
+      where: { id },
+      data: { status },
+      include: {
+        organizer: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return {
+      message: `Event status successfully updated to ${status}`,
+      data: updatedEvent,
+    };
+  }
+
+  // ১৭.৩ অ্যাডমিন কর্তৃক সরাসরি যেকোনো ইভেন্ট সম্পূর্ণ ডিলিট করা (Force Delete)
+  async deleteEventByAdmin(id: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
+    }
+
+    await this.prisma.event.delete({
+      where: { id },
+    });
+
+    return {
+      message: `Event '${event.title}' permanently deleted by Admin`,
+    };
+  }
+}

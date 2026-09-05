@@ -38,7 +38,7 @@ model Event {
   totalSeats     Int         // মোট আসন
   availableSeats Int         // অবশিষ্ট আসন (যেমন: 498 seats left)
   isFeatured     Boolean     @default(false) // Featured events সেকশনের জন্য
-  status         EventStatus @default(PUBLISHED)
+  status         EventStatus @default(PENDING)
   // রিলেশন: কোন অর্গানাইজার ইভেন্টটি তৈরি করেছে
   organizerId    String
   organizer      User        @relation(fields: [organizerId], references: [id], onDelete: Cascade)
@@ -63,7 +63,9 @@ enum EventType {
 
 enum EventStatus {
   DRAFT
+  PENDING
   PUBLISHED
+  REJECTED
   CANCELLED
   COMPLETED
 }
