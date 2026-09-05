@@ -57,6 +57,19 @@ export class EventsController {
     const user = (req as any).user;
     return this.eventsService.findMyEvents(user.id);
   }
+
+  // ১০.৩ ইউজারের নিজের সেভ করা تمام ইভেন্ট দেখা (Protected)
+  // (নোট: :id রাউটের আগে my-favorites থাকতে হবে যেন কনফ্লিক্ট না করে)
+  @Get('my-favorites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all saved / favorite events of logged-in user' })
+  @ApiResponse({ status: 200, description: 'User favorite events list' })
+  getMyFavorites(@Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.getMyFavorites(user.id);
+  }
+
   // ৪. নির্দিষ্ট একটি ইভেন্ট দেখা (Public)
   @Get(':id')
   @ApiOperation({ summary: 'Get event details by ID' })
@@ -66,6 +79,7 @@ export class EventsController {
   findOne(@Param('id') id: string) {
     return this.eventsService.findOne(id);
   }
+
   // ৫. ইভেন্ট আপডেট করা (Protected - Only Organizer)
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
@@ -82,6 +96,7 @@ export class EventsController {
     const user = (req as any).user;
     return this.eventsService.update(id, user.id, dto);
   }
+
   // ৬. ইভেন্ট ডিলিট করা (Protected - Only Organizer)
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
@@ -135,5 +150,31 @@ export class EventsController {
   cancelRegistration(@Param('id') id: string, @Req() req: Request) {
     const user = (req as any).user;
     return this.eventsService.cancelRegistration(id, user.id);
+  }
+
+  // ১০.১ ইভেন্ট ফেভারিট / সেভ করা (Protected)
+  @Post(':id/favorite')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add event to favorites / bookmarks' })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({ status: 201, description: 'Event saved to favorites' })
+  @ApiResponse({ status: 409, description: 'Already in favorites' })
+  addFavorite(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.addFavorite(id, user.id);
+  }
+
+  // ১০.২ ফেভারিট থেকে ইভেন্ট রিমুভ করা (Protected)
+  @Delete(':id/favorite')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove event from favorites' })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({ status: 200, description: 'Event removed from favorites' })
+  @ApiResponse({ status: 404, description: 'Not in favorites' })
+  removeFavorite(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user;
+    return this.eventsService.removeFavorite(id, user.id);
   }
 }

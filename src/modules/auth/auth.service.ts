@@ -32,24 +32,36 @@ export class AuthService {
       );
     }
 
+    const userName = dto.name || dto.fullName || dto.email.split('@')[0];
+
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email: dto.email.toLowerCase().trim() },
     });
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
+    
+    // Role handling (if sent by frontend)
+    let userRole = dto.role ?? 'USER';
+    if (userRole !== 'USER' && userRole !== 'ADMIN' && userRole !== 'ORGANIZER') {
+      userRole = 'USER';
+    }
+
     const user = await this.prisma.user.create({
       data: {
-        name: dto.name,
-        email: dto.email,
+        name: userName,
+        email: dto.email.toLowerCase().trim(),
         password: hashedPassword,
+        role: userRole,
       },
     });
 
     const { password, ...result } = user;
     return {
+      success: true,
+      statusCode: 201,
       message: 'User registered successfully',
       data: result,
     };
@@ -58,7 +70,7 @@ export class AuthService {
   // Login
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email: dto.email.toLowerCase().trim() },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -72,14 +84,22 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
     return {
+      success: true,
+      statusCode: 200,
       message: 'Login successful',
       accessToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+      user: userResponse,
+      data: {
+        accessToken,
+        user: userResponse,
       },
     };
   }

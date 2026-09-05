@@ -1,23 +1,35 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
-  @ApiProperty({ example: 'John Doe', description: 'Full name of the user' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ example: 'John Doe', description: 'User name' })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
-  @ApiProperty({ example: 'john@example.com', description: 'Unique email address' })
-  @IsEmail()
+  @ApiPropertyOptional({ example: 'John Doe', description: 'Full name' })
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @ApiPropertyOptional({ example: 'john@example.com', description: 'Email address' })
+  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail({}, { message: 'Invalid email address' })
   email: string;
 
-  @ApiProperty({ example: 'password123', description: 'Account password (minimum 6 characters)' })
-  @IsNotEmpty({ message: 'Password must be at least 6 characters long' })
+  @ApiPropertyOptional({ example: 'password123', description: 'Password' })
+  @IsNotEmpty({ message: 'Password is required' })
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
 
-  @ApiProperty({ example: 'password123', description: 'Must match password' })
-  @IsNotEmpty({ message: 'Confirm password is required' })
+  @ApiPropertyOptional({ example: 'password123', description: 'Confirm password' })
+  @IsOptional()
   @IsString()
-  confirmPassword: string;
+  confirmPassword?: string;
+
+  @ApiPropertyOptional({ example: 'USER', description: 'Role (USER, ORGANIZER, ADMIN)' })
+  @IsOptional()
+  @IsString()
+  role?: any;
 }
+

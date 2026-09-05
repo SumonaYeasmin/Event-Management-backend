@@ -19,6 +19,8 @@ model User {
   events            Event[]
   // রিলেশন: একজন ইউজার একাধিক ইভেন্টে রেজিস্টার করতে পারে
   registrations     Registration[]
+  // রিলেশন: একজন ইউজারের ফেভারিট / বুকমার্ক করা ইভেন্টসমূহ
+  favorites         Favorite[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -42,6 +44,8 @@ model Event {
   organizer      User        @relation(fields: [organizerId], references: [id], onDelete: Cascade)
   // রিলেশন: ইভেন্টের সমস্ত রেজিস্ট্রেশন
   registrations  Registration[]
+  // রিলেশন: ইভেন্টটির ফেভারিট কাউন্ট / তালিকা
+  favorites      Favorite[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 }
@@ -86,6 +90,23 @@ model Registration {
 enum RegistrationStatus {
   CONFIRMED
   CANCELLED
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+
+  // কোন ইউজার ফেভারিট করেছে
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // কোন ইভেন্ট ফেভারিট করা হয়েছে
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  // 💡 গুরুত্বপূর্ণ: একই ইউজার একই ইভেন্ট একবারই ফেভারিট করতে পারবে
+  @@unique([userId, eventId])
 }
 
 

@@ -8,13 +8,17 @@ import { AppModule } from './app.module.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  });
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // ফ্রন্টএন্ড থেকে অতিরিক্ত কোনো ফিল্ড আসলে এরর না দিয়ে বাদ দিয়ে দিবে
       transform: true,
     }),
   );

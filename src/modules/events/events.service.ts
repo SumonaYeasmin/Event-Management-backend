@@ -290,4 +290,102 @@ export class EventsService {
       };
     });
   }
+
+  // ১০.১ ইভেন্ট ফেভারিট / বুকমার্ক করা
+  async addFavorite(eventId: string, userId: string) {
+    // ১. চেক: ইভেন্টটি ডাটাবেজে আছে কি না
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    // ২. চেক: ইতিমধ্যে ফেভারিট করা আছে কি না
+    const existing = await this.prisma.favorite.findUnique({
+      where: {
+        userId_eventId: {
+          userId,
+          eventId,
+        },
+      },
+    });
+    if (existing) {
+      throw new ConflictException('Event is already in your favorites');
+    }
+
+    // ৩. সেভ করা
+    const favorite = await this.prisma.favorite.create({
+      data: {
+        eventId,
+        userId,
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            bannerImage: true,
+            location: true,
+            date: true,
+            ticketPrice: true,
+          },
+        },
+      },
+    });
+
+    return {
+      message: 'Event saved to favorites successfully',
+      data: favorite,
+    };
+  }
+
+  // ১০.২ ফেভারিট থেকে রিমুভ করা
+  async removeFavorite(eventId: string, userId: string) {
+    const favorite = await this.prisma.favorite.findUnique({
+      where: {
+        userId_eventId: {
+          userId,
+          eventId,
+        },
+      },
+    });
+
+    if (!favorite) {
+      throw new NotFoundException('Event not found in your favorites');
+    }
+
+    await this.prisma.favorite.delete({
+      where: {
+        id: favorite.id,
+      },
+    });
+
+    return {
+      message: 'Event removed from favorites successfully',
+    };
+  }
+
+  // ১০.৩ ইউজারের নিজের সেভ করা সমস্ত ইভেন্টের তালিকা আনা
+  async getMyFavorites(userId: string) {
+    const favorites = await this.prisma.favorite.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        event: {
+          include: {
+            organizer: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      total: favorites.length,
+      data: favorites.map((fav) => fav.event),
+    };
+  }
 }
+
