@@ -58,12 +58,26 @@ export class AuthService {
       },
     });
 
-    const { password, ...result } = user;
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
     return {
       success: true,
       statusCode: 201,
       message: 'User registered successfully',
-      data: result,
+      accessToken,
+      user: userResponse,
+      data: {
+        accessToken,
+        user: userResponse,
+      },
     };
   }
 

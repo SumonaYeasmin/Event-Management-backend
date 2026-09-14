@@ -11,9 +11,18 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { EventType } from '../../../generated/prisma/enums.js';
+import { EventStatus, EventType } from '../../../generated/prisma/enums.js';
 
 export class CreateEventDto {
+  @ApiPropertyOptional({
+    enum: ['DRAFT', 'PENDING'],
+    default: 'PENDING',
+    description: 'Event status (DRAFT or PENDING)',
+  })
+  @IsOptional()
+  @IsEnum(EventStatus)
+  status?: EventStatus;
+
   @ApiProperty({
     example: 'Innovate 2026 — The Future of Technology',
     description: 'Title of the event',

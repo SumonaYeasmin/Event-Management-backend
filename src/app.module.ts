@@ -4,14 +4,16 @@ import { AppService } from './app.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { EventsModule } from './modules/events/events.module.js';
+import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
     EventsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

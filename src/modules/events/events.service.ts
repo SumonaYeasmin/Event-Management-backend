@@ -31,7 +31,7 @@ export class EventsService {
         totalSeats: dto.totalSeats,
         availableSeats: dto.totalSeats, // শুরুতে সমস্ত সিট অবশিষ্ট থাকবে
         isFeatured: dto.isFeatured ?? false,
-        status: EventStatus.PENDING, // 👈 অ্যাডমিনের অ্যাপ্রুভালের জন্য PENDING থাকবে
+        status: dto.status ?? EventStatus.PENDING, // 👈 ড্রাফট বা অ্যাডমিনের অ্যাপ্রুভালের জন্য PENDING
         organizerId,
       },
     });

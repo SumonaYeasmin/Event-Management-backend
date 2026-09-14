@@ -11,7 +11,6 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   fullName?: string;
-
   @ApiPropertyOptional({ example: 'john@example.com', description: 'Email address' })
   @IsNotEmpty({ message: 'Email is required' })
   @IsEmail({}, { message: 'Invalid email address' })
