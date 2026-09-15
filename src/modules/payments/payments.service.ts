@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -29,6 +30,11 @@ export class PaymentsService {
 
     if (event.status !== 'PUBLISHED') {
       throw new BadRequestException('Event is not published');
+    }
+
+    // অর্গানাইজার নিজের ইভেন্টের টিকিট কিনতে পারবে না
+    if (event.organizerId === userId) {
+      throw new ForbiddenException('Organizers cannot purchase tickets for their own event');
     }
 
     if (event.availableSeats <= 0) {

@@ -162,6 +162,11 @@ export class EventsService {
       throw new BadRequestException('Cannot register for an unpublished event');
     }
 
+    // অর্গানাইজার নিজের ইভেন্টে টিকিট বুক করতে পারবে না
+    if (event.organizerId === userId) {
+      throw new ForbiddenException('Organizers cannot register for their own event');
+    }
+
     // ২. চেক: ইউজার ইতিমধ্যে রেজিস্টার করেছে কি না
     const existingRegistration = await this.prisma.registration.findUnique({
       where: {
