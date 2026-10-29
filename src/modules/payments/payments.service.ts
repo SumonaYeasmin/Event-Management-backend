@@ -43,11 +43,18 @@ export class PaymentsService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, role: true },
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // শুধুমাত্র USER রোল টিকিট কিনতে পারবে
+    if (user.role !== 'USER') {
+      throw new ForbiddenException(
+        `Only regular users (attendees) can purchase tickets. Current role: ${user.role}`,
+      );
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';

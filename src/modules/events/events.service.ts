@@ -167,6 +167,17 @@ export class EventsService {
       throw new ForbiddenException('Organizers cannot register for their own event');
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!user || user.role !== 'USER') {
+      throw new ForbiddenException(
+        `Only attendees (USER) can register for events. Current role: ${user?.role || 'UNKNOWN'}`,
+      );
+    }
+
     // ২. চেক: ইউজার ইতিমধ্যে রেজিস্টার করেছে কি না
     const existingRegistration = await this.prisma.registration.findUnique({
       where: {
