@@ -48,6 +48,21 @@ jobs:
       - name: Build Project
         run: npm run build
 
-              # ধাপ জ: ডকার ইমেজ সঠিকভাবে বিল্ড হয় কিনা পরীক্ষা করা
-      - name: Build Docker Image
-        run: docker build -t event-backend:test .
+             # ধাপ জ: Docker Buildx সেটআপ করা (ইমেজ তৈরির আধুনিক টুল)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ধাপ ঝ: গিটহাব সিক্রেটস ব্যবহার করে Docker Hub-এ লগইন করা
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ধাপ ঞ: ইমেজটি বিল্ড করে স্বয়ংক্রিয়ভাবে Docker Hub-এ পুশ করা
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/event-management-backend:latest
