@@ -1,0 +1,53 @@
+
+# ১. পাইপলাইনের একটি সুন্দর নাম
+name: Event Management CI Pipeline
+
+# ২. ট্রিগার: এই পাইপলাইনটি কখন নিজে থেকেই চলবে?
+on:
+  push:
+    branches: [ "main" ]      # যখনই 'main' ব্রাঞ্চে কোনো কোড push হবে
+  pull_request:
+    branches: [ "main" ]      # যখন কেউ 'main' ব্রাঞ্চে Pull Request পাঠাবে
+
+# ৩. কাজসমূহ (Jobs)
+jobs:
+  test-and-build:
+    # গিটহাব ক্লাউডে ফ্রি একটি উবুন্টু লিনাক্স কম্পিউটার চালু করবে
+    runs-on: ubuntu-latest
+
+    # ওই কম্পিউটারে একটার পর একটা যে কাজগুলো চলবে:
+    steps:
+      # ধাপ ক: আপনার গিটহাবের কোড ওই লিনাক্স কম্পিউটারে ক্লোন/ডাউনলোড করা
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ধাপ খ: কম্পিউটারে Node.js 22 সেটআপ করা
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      # ধাপ গ: প্রজেক্টের ডিপেন্ডেন্সি ইনস্টল করা
+      - name: Install Dependencies
+        run: npm install
+
+      # ধাপ ঘ: কোডে কোনো ভুল বা সিনট্যাক্স এরর আছে কিনা যাচাই করা (Linting)
+      - name: Run Linter
+        run: npm run lint
+
+      # ধাপ ঙ: প্রিজমা ক্লায়েন্ট তৈরি করা (বিল্ডের আগে যা প্রয়োজন)
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # ধাপ চ: কোনো টেস্ট ফাইল ফেইল করে কিনা যাচাই করা (Unit Tests)
+      - name: Run Tests
+        run: npm run test -- --passWithNoTests
+
+      # ধাপ ছ: টাইপস্ক্রিপ্ট সোর্স কোড ঠিকঠাক বিল্ড (dist) হয় কিনা দেখা
+      - name: Build Project
+        run: npm run build
+
+              # ধাপ জ: ডকার ইমেজ সঠিকভাবে বিল্ড হয় কিনা পরীক্ষা করা
+      - name: Build Docker Image
+        run: docker build -t event-backend:test .
